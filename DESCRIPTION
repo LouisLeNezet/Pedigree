@@ -64,7 +64,8 @@ Suggests:
     devtools,
     R.devices,
     usethis,
-    magick
+    magick,
+    rlang
 Config/testthat/edition: 3
 biocViews: Software, DataRepresentation, Genetics, GraphAndNetwork, Visualization
 BugReports: https://github.com/LouisLeNezet/Pedixplorer/issues
