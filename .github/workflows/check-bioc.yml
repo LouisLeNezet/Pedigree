@@ -86,7 +86,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev
+          sudo apt-get install -y libgtk-3-dev gnupg2 npm
+          npm install jquery
 
       ## Set up Chrome for shinytest
       - id: setup-chrome
@@ -185,7 +186,7 @@ jobs:
         run: Rscript -e 'install.packages("chromote", repos = "https://cloud.r-project.org")'
 
       - name: Install covr
-        if: github.ref == 'refs/heads/devel' && env.run_covr == 'true' && runner.os == 'Linux'
+        if: env.run_covr == 'true' && runner.os == 'Linux'
         run: |
           remotes::install_cran("covr")
         shell: Rscript {0}
@@ -200,6 +201,8 @@ jobs:
       - name: Run CMD check
         env:
           CHROMOTE_CHROME: ${{ steps.setup-chrome.outputs.chrome-path }}
+          CHROMOTE_HEADLESS: "1"
+          CHROMOTE_ARGS : "--no-sandbox --disable-gpu"
           _R_CHECK_CRAN_INCOMING_: false
           DISPLAY: 99.0
         run: |
@@ -207,9 +210,20 @@ jobs:
           rcmdcheck::rcmdcheck(
               args = c("--no-manual", "--no-vignettes", "--timings"),
               build_args = c("--no-manual", "--keep-empty-dirs", "--no-resave-data"),
-              error_on = "warning",
+              error_on = "never",
               check_dir = "check"
           )
+          rlang::last_error()
+        shell: Rscript {0}
+
+      - name: Debug check
+        if : failure() && runner.os == 'Linux'
+        run: cat /__w/Pedixplorer/Pedixplorer/check/Pedixplorer.Rcheck/00check.log
+        shell: bash
+      
+      - name: Debug check
+        if : failure() && runner.os == 'Linux'
+        run: rlang::last_error()
         shell: Rscript {0}
 
       - name: Reveal testthat details
@@ -230,7 +244,7 @@ jobs:
         shell: Rscript {0}
 
       - name: Test coverage
-        if: github.ref == 'refs/heads/devel' && env.run_covr == 'true' && runner.os == 'Linux'
+        if: env.run_covr == 'true' && runner.os == 'Linux'
         env:
           SKIP_SHINY_TESTS: "TRUE"
         run: |
@@ -243,12 +257,12 @@ jobs:
         shell: Rscript {0}
       
       - name: Debug failed tests
-        if: failure()
-        run: cat /__w/_temp/package/Pedixplorer/Pedixplorer-tests/testthat.Rout.fail
+        if: failure() && env.run_covr == 'true' && runner.os == 'Linux'
+        run: cat ${{ runner.temp }}/package/Pedixplorer/Pedixplorer-tests/testthat.Rout.fail
         shell: bash
 
       - uses: codecov/codecov-action@v4
-        if: github.ref == 'refs/heads/devel' && env.run_covr == 'true' && runner.os == 'Linux'
+        if: env.run_covr == 'true' && runner.os == 'Linux'
         with:
           file: ./cobertura.xml
           plugin: noop

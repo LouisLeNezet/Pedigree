@@ -15,13 +15,15 @@
 library(Pedixplorer)
 library(shinytest2)
 library(R.devices)
+library(rlang)
 
 ## Set up the environment
 
 Sys.setenv(
     CHROMOTE_CHROME = Sys.getenv("CHROMOTE_CHROME"),
-    CHROMOTE_HEADLESS = "new",
+    CHROMOTE_HEADLESS = Sys.getenv("CHROMOTE_HEADLESS"),
     SKIP_SHINY_TESTS = Sys.getenv("SKIP_SHINY_TESTS"),
+    CHROMOTE_ARGS = Sys.getenv("CHROMOTE_ARGS"),
     R_TESTS = ""
 )
 
@@ -49,8 +51,9 @@ R.devices::devNew("pdf", width = 10, height = 10, par = par_lst)
 ## Set up the environment
 options(
     shiny.testmode = TRUE,
-    shinytest2.load_timeout = 3000000,
+    shinytest2.load_timeout = 120000,
     shiny.fullstacktrace = TRUE,
+    shiny.port = 3929,
     chromote.verbose = TRUE,
     digits = 4, width = 150,
     browser = Sys.getenv("CHROMOTE_CHROME"),
@@ -60,8 +63,13 @@ options(
     pkgType = "source",
     showErrorCalls = TRUE,
     timeout = 600,
-    unzip = "internal"
+    unzip = "internal",
+    error = rlang::entrace,
+    rlang_backtrace_on_error_report = "full",
+    rlang_backtrace_on_warning_report = "full"
 )
+
+rlang::global_entrace()
 
 ## Run the tests
 test_check("Pedixplorer")

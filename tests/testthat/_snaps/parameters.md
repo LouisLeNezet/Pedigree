@@ -334,6 +334,70 @@
       $encoding
       [1] "native.enc"
       
+      $error
+      (function (cnd, ..., top = NULL, bottom = NULL) 
+      {
+          check_dots_empty0(...)
+          if (!missing(cnd) && inherits(cnd, "rlang_error")) {
+              poke_last_error(cnd)
+              return()
+          }
+          if (is_null(bottom)) {
+              if (missing(cnd)) {
+                  bottom <- current_env()
+              }
+              else {
+                  bottom <- caller_env()
+              }
+          }
+          if (is_environment(bottom)) {
+              nframe <- eval_bare(quote(base::sys.nframe()), bottom) - 
+                  1
+              info <- signal_context_info(nframe)
+              bottom <- sys.frame(info[[2]])
+          }
+          if (!has_new_cmd_frame() && the$n_conditions >= max_entracing()) {
+              trace <- NULL
+          }
+          else {
+              trace <- trace_back(top = top, bottom = bottom)
+          }
+          if (missing(cnd)) {
+              return(entrace_handle_top(trace))
+          }
+          if (is_warning(cnd)) {
+              wrn <- as_rlang_warning(cnd, trace)
+              push_warning(wrn)
+              if (!is_null(findRestart("muffleWarning"))) {
+                  if (identical(peek_option("warn"), 2L)) {
+                      return()
+                  }
+                  else {
+                      warning(wrn)
+                      invokeRestart("muffleWarning")
+                  }
+              }
+              else {
+                  return()
+              }
+          }
+          if (is_message(cnd)) {
+              push_message(as_rlang_message(cnd, trace))
+              return()
+          }
+          if (is_error(cnd)) {
+              if (has_recover()) {
+                  return()
+              }
+              entraced <- error_cnd(message = conditionMessage(cnd) %||% 
+                  "", call = conditionCall(cnd), error = cnd, trace = trace, 
+                  use_cli_format = FALSE)
+              poke_last_error(entraced)
+              cnd_signal(entraced)
+          }
+          NULL
+      })()
+      
       $example.ask
       [1] "default"
       
@@ -410,6 +474,12 @@
           CRAN 
       "@CRAN@" 
       
+      $rlang_backtrace_on_error_report
+      [1] "full"
+      
+      $rlang_backtrace_on_warning_report
+      [1] "full"
+      
       $rlang_interactive
       [1] FALSE
       
@@ -419,11 +489,14 @@
       $shiny.fullstacktrace
       [1] TRUE
       
+      $shiny.port
+      [1] 3929
+      
       $shiny.testmode
       [1] TRUE
       
       $shinytest2.load_timeout
-      [1] 3e+06
+      [1] 120000
       
       $show.coef.Pvalues
       [1] TRUE
